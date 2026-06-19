@@ -8,55 +8,153 @@ EXTERN scanf: PROC
 ExitProcess proto
 
 .data
+    matriz1 dq 0,0,0, 0,0,0, 0,0,0
+    matriz2 dq 0,0,0, 0,0,0, 0,0,0
     labelM1  db "Matriz 1: ", 10, 0
     labelM2 db "Matriz 2: ", 10, 0
     labelFila1 db "Fila 1: ", 10, 0
     labelFila2 db "Fila 2: ", 10, 0
     labelFila3 db "Fila 3: ", 10, 0
+    filaTest1 db "Fila 1: %lf, %lf, %lf",10 ,0
+    filaTest2 db "Fila 2: %lf, %lf, %lf",10 ,0
+    filaTest3 db "Fila 3: %lf, %lf, %lf",10 ,0
     tomaUnDouble  db "%lf", 0       ;Toma un double
-    matriz1 dq 0,0,0, 0,0,0, 0,0,0
-    matriz2 dq 0,0,0, 0,0,0, 0,0,0
-
+    
 .code
 main PROC
-    sub RSP, 28h ; reservar espacio en la 
-    sub RSP, 10h ; reservar espacio para alinear la pila a 16 bytes
+    sub RSP, 28h  
 
     call leerEntradas
-
+    xor RAX, RAX
+    call printMatrix1
+    call printMatrix2
     mov ECX, 0          ; codigo de salida
     call ExitProcess
 
 main ENDP
+
+printMatrix1 PROC
+
+    sub rsp, 28h         
+
+    lea rcx, labelM1
+    call printf
+
+    
+    lea rcx, filaTest1
+    lea RAX, matriz1
+    movsd xmm1, QWORD PTR [RAX]
+    movq rdx, xmm1
+    movsd xmm2, QWORD PTR [RAX+8]
+    movq r8, xmm2
+    movsd xmm3, QWORD PTR [RAX+16]
+    movq r9, xmm3
+    call printf
+
+   
+    lea rcx, filaTest2
+    lea RAX, matriz1
+    movsd xmm1, QWORD PTR [RAX+24]
+    movq rdx, xmm1
+    movsd xmm2, QWORD PTR [RAX+32]
+    movq r8, xmm2
+    movsd xmm3, QWORD PTR [RAX+40]
+    movq r9, xmm3
+    call printf
+
+    
+    lea rcx, filaTest3
+    lea RAX, matriz1
+    movsd xmm1, QWORD PTR [RAX+48]
+    movq rdx, xmm1
+    movsd xmm2, QWORD PTR [RAX+56]
+    movq r8, xmm2
+    movsd xmm3, QWORD PTR [RAX+64]
+    movq r9, xmm3
+    call printf
+
+    add rsp, 28h
+    ret
+
+printMatrix1 ENDP
+
+printMatrix2 PROC
+
+    sub rsp, 28h         
+
+    lea rcx, labelM1
+    call printf
+
+    
+    lea rcx, filaTest1
+    lea RAX, matriz2
+    movsd xmm1, QWORD PTR [RAX]
+    movq rdx, xmm1
+    movsd xmm2, QWORD PTR [RAX+8]
+    movq r8, xmm2
+    movsd xmm3, QWORD PTR [RAX+16]
+    movq r9, xmm3
+    call printf
+
+   
+    lea rcx, filaTest2
+    lea RAX, matriz2
+    movsd xmm1, QWORD PTR [RAX+24]
+    movq rdx, xmm1
+    movsd xmm2, QWORD PTR [RAX+32]
+    movq r8, xmm2
+    movsd xmm3, QWORD PTR [RAX+40]
+    movq r9, xmm3
+    call printf
+
+    
+    lea rcx, filaTest3
+    lea RAX, matriz2
+    movsd xmm1, QWORD PTR [RAX+48]
+    movq rdx, xmm1
+    movsd xmm2, QWORD PTR [RAX+56]
+    movq r8, xmm2
+    movsd xmm3, QWORD PTR [RAX+64]
+    movq r9, xmm3
+    call printf
+
+    add rsp, 28h
+    ret
+
+printMatrix2 ENDP
 
 output PROC
 
 output ENDP
 
 leerEntradas PROC
-    ;push RBX            ; preservar RBX, RSP-8
-    ;sub RSP, 20h       
+    
+    sub RSP, 38h ;32 bytes Shadow space + 8bytes de alineamiento + 16bits de variables locales
+                 ;Al llamar leerEntradas queda alineado 16bytes pero 
+                 ;Si se llama otra funcion se agregan 8 bytes el alineamiento
 
-    ;R14 -> Filas
-    ;R15 -> Contador columnas
+    ;[RSP +28h] -> Filas
+    ;[RSP +30h] -> Contador columnas
     ;R13 -> temp
 
-    mov R14, 0; 
-    mov R15, 0;
-    mov R13, 0;
+    mov R13, 0
+    mov [RSP +28h], R13; 
+    mov [RSP +30h], R13;
 
     lea RCX, labelM1
     call printf
 
     tomarDatosMatriz1:
-        mov R15, 0
-        cmp R14, 0
+        mov R13, 0
+        mov [RSP +30h], R13
+        mov R14, [RSP + 28h]
+        cmp R14, 0 ;IF Fila == 0
         je fila1m1
-        cmp R14, 1
+        cmp R14, 1 ;IF Fila == 1
         je fila2m1
-        cmp R14, 2
+        cmp R14, 2 ;IF Fila == 2
         je fila3m1
-        jmp terminarDatosMatriz1
+        jmp terminarDatosMatriz1 ; ELSE
         fila1m1:
             lea RCX, labelFila1
             call printf
@@ -72,38 +170,44 @@ leerEntradas PROC
         ciclos_columnas:
             ;8*3 *fila + columna*8
             ;8*(3*fila+columna)
-            mov RAX, R14 ;RAX <- fila
+            mov RAX, [RSP + 28h] ;RAX <- fila
             mov R13, 3   ;
             xor RDX, RDX ; Limpiar RDX
             mul R13      ;fila * 3
-            add RAX, R15 ; fila + columna
+            add RAX, [RSP +30h] ; fila + columna
             mov R13, 8   ;R13 = 8
             xor RDX, RDX ; Limpiar RDX
             mul R13      ;8*(3*fila+columna)
-            add RAX, matriz1;Dirreccion especifica
+            lea R13, matriz1
+            add RAX, R13 ;Dirreccion especifica
+            xor R15,R15
             lea RCX, tomaUnDouble ;
             mov RDX, RAX       
             call scanf
-            inc R15
+            inc QWORD PTR [RSP +30h]
+            mov R15, [RSP +30h]
             cmp R15, 3
-            jmp ciclos_columnas
-            if_r15_LE_3:
-                inc R14
+            jl ciclos_columnas
+            if_r15_GE_3:
+                inc QWORD PTR [RSP + 28h]
                 jmp tomarDatosMatriz1
     terminarDatosMatriz1:
-        mov R14, 0; 
-        mov R15, 0;
-        lea RCX, labelM1
+        mov R13, 0
+        mov [RSP + 28h], R13; 
+        mov [RSP +30h], R13;
+        lea RCX, labelM2
         call printf
         tomarDatosMatriz2:
-            mov R15, 0
+            mov R13, 0
+            mov [RSP +30h], R13
+            mov R14, [RSP + 28h]
             cmp R14, 0
             je fila1m2
             cmp R14, 1
             je fila2m2
             cmp R14, 2
             je fila3m2
-            jmp terminarDatosMatriz1
+            jmp terminarDatosMatriz2
             fila1m2:
                 lea RCX, labelFila1
                 call printf
@@ -119,27 +223,29 @@ leerEntradas PROC
             ciclos_columnas_m2:
                 ;8*3 *fila + columna*8
                 ;8*(3*fila+columna)
-                mov RAX, R14          ; RAX <- fila
+                mov RAX, [RSP + 28h]     ; RAX <- fila
                 mov R13, 3            ;
                 xor RDX, RDX
                 mul R13               ; fila * 3
-                add RAX, R15          ; fila + columna
+                add RAX, [RSP +30h]     ; fila + columna
                 mov R13, 8            ; R13 = 8
                 xor RDX, RDX
                 mul R13               ; 8*(3*fila+columna)
-                add RAX, matriz2      ; Dirreccion especifica
+                lea R13, matriz2
+                add RAX, R13      ; Dirreccion especifica
                 lea RCX, tomaUnDouble ; 
                 mov RDX, RAX
                 call scanf
-                inc R15
+                inc QWORD PTR [RSP +30h]
+                mov R15, [RSP +30h]
                 cmp R15, 3
-                jmp ciclos_columnas_m2
-                if_r15_LE_3_m2:
-                    inc R14
+                jl ciclos_columnas_m2
+                if_r15_GE_3_m2:
+                    inc QWORD PTR [RSP + 28h]
                     jmp tomarDatosMatriz2
     terminarDatosMatriz2:
     
-    ;add RSP, 20h
+    add RSP, 38h
     ret
 leerEntradas ENDP
 END
