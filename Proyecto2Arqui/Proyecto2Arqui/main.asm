@@ -19,15 +19,53 @@ ExitProcess proto
     filaTest2 db "Fila 2: %lf, %lf, %lf",10 ,0
     filaTest3 db "Fila 3: %lf, %lf, %lf",10 ,0
     tomaUnDouble  db "%lf", 0       ;Toma un double
-    
+    matrizDiff dq 0,0,0, 0,0,0, 0,0,0
+    labelDiff db "Matriz diferencia:", 10, 0
+    filaDiff1  db "Fila 1: %lf, %lf, %lf", 10, 0
+    filaDiff2  db "Fila 2: %lf, %lf, %lf", 10, 0
+    filaDiff3  db "Fila 3: %lf, %lf, %lf", 10, 0
+ 
 .code
 main PROC
     sub RSP, 28h  
 
     call leerEntradas
     xor RAX, RAX
+    lea R8,  matriz1
+    lea R9,  matriz2
+    lea R10, matrizDiff
+
+    ; Fila 0 
+    vmovupd ymm0, [R8]          ; carga 4 doubles desde matriz1 (el 4to es de la fila 2, lo ignoramos)
+    vmovupd ymm1, [R9]
+    vsubpd  ymm2, ymm0, ymm1
+    vmovupd [R10], ymm2 
+
+    ; Fila 1
+    vmovupd xmm0, [R8+24]
+    vmovupd xmm1, [R9+24]
+    vsubpd  xmm2, xmm0, xmm1
+    vmovupd [R10+24], xmm2
+
+    movsd xmm0, QWORD PTR [R8+40]
+    movsd xmm1, QWORD PTR [R9+40]
+    subsd xmm0, xmm1
+    movsd QWORD PTR [R10+40], xmm0
+
+    ; Fila 2
+    vmovupd xmm0, [R8+48]
+    vmovupd xmm1, [R9+48]
+    vsubpd  xmm2, xmm0, xmm1
+    vmovupd [R10+48], xmm2
+
+    movsd xmm0, QWORD PTR [R8+64]
+    movsd xmm1, QWORD PTR [R9+64]
+    subsd xmm0, xmm1
+    movsd QWORD PTR [R10+64], xmm0
+
     call printMatrix1
     call printMatrix2
+    call printMatrizDiff
     mov ECX, 0          ; codigo de salida
     call ExitProcess
 
@@ -122,6 +160,47 @@ printMatrix2 PROC
     ret
 
 printMatrix2 ENDP
+
+printMatrizDiff PROC
+    sub RSP, 28h
+
+    lea RCX, labelDiff
+    call printf
+
+    lea RCX, filaDiff1
+    lea RAX, matrizDiff
+    movsd xmm1, QWORD PTR [RAX]
+    movq rdx, xmm1
+    movsd xmm2, QWORD PTR [RAX+8]
+    movq r8, xmm2
+    movsd xmm3, QWORD PTR [RAX+16]
+    movq r9, xmm3
+    call printf
+
+    lea RCX, filaDiff2
+    lea RAX, matrizDiff
+    movsd xmm1, QWORD PTR [RAX+24]
+    movq rdx, xmm1
+    movsd xmm2, QWORD PTR [RAX+32]
+    movq r8, xmm2
+    movsd xmm3, QWORD PTR [RAX+40]
+    movq r9, xmm3
+    call printf
+
+    lea RCX, filaDiff3
+    lea RAX, matrizDiff
+    movsd xmm1, QWORD PTR [RAX+48]
+    movq rdx, xmm1
+    movsd xmm2, QWORD PTR [RAX+56]
+    movq r8, xmm2
+    movsd xmm3, QWORD PTR [RAX+64]
+    movq r9, xmm3
+    call printf
+
+    add RSP, 28h
+    ret
+printMatrizDiff ENDP
+
 
 output PROC
 
