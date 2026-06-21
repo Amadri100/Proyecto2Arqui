@@ -30,12 +30,13 @@ main PROC
     call leerEntradas
     xor RAX, RAX
 
+    ;Guarda las direcciones
     lea R8,  matriz1
     lea R9,  matriz2
     lea R10, matrizdif
 
     ; Fila 0
-    vmovupd xmm0, [R8]
+    vmovupd xmm0, [R8]      
     vmovupd xmm1, [R9]
     vsubpd  xmm2, xmm0, xmm1
     vmovupd [R10], xmm2
@@ -174,8 +175,8 @@ printResultado PROC
     sub rsp, 28h
     lea rcx, mostrarResultado
     lea RAX, distancia
-    movsd xmm1, QWORD PTR [RAX]
-    movq rdx, xmm1
+    movsd xmm1, QWORD PTR [RAX] ;Gurda dato tal cual en xmm1
+    movq rdx, xmm1              ;Parametro real de la funcion
     call printf
     add rsp, 28h
     ret
@@ -189,7 +190,7 @@ normaFrobenius PROC
 ;d, e, f
 ;g, h, i
 ;Cargar Datos
-vmovupd YMM0, [matrizdif] ;YMM0 <- a,b,c,d(no se usa)
+vmovupd YMM0, [matrizdif] ;YMM0 <- a,b,c,d(no se usa) ;En realidad los registros estan invertido: d,c,b,a
 vmovupd YMM1, [matrizdif+18h] ;YMM1<- d,e,f,g(no se usa)
 vmovupd XMM8, [matrizdif+30h] ;XMM8 <- g, h
 vxorpd XMM9,XMM9,XMM9
@@ -209,30 +210,30 @@ vmulpd YMM0, YMM0, YMM0 ;YMM0^2 <- YMM0 * YMM0
 vmulpd YMM1, YMM1, YMM1
 vmulpd YMM2, YMM2, YMM2
 ;Sumarlos registros
-vaddpd YMM1, YMM0, YMM1 
-vaddpd YMM2, YMM1, YMM2
+vaddpd YMM1, YMM0, YMM1 ; YMM1 <- a+d, b+e, c +f ,...
+vaddpd YMM2, YMM1, YMM2 ; YMM2 <- a+d+g, b+e+h, c +f+i ,...
 vxorpd YMM3, YMM3, YMM3 ;YMM3 <- 0,0,0,0
 vpcmpeqq YMM3, YMM3, YMM3 ;YMM3 <- val_max, val_max,....
 ;La instruccion compara YMM3 == YMM3 en 2 partes de 128 bits
 ;Si son iguales deja  FFFFFFFFFFFFFFFFH en la parte correspondiente en el registro destino
-sub RSP, 20h
-vmovupd [RSP], YMM3
+sub RSP, 20h        ; Reserva un arreglo de 4 valores de 8bytes
+vmovupd [RSP], YMM3 ; Escribe los datos en el espacio reservado
 ;RSP : val_max
 ;RSP +8h : val_max
 ;RSP +10h : val_max
 ;RSP +18h : val_max
-xor RAX,RAX
-mov [RSP+18h], RAX ; RSP+18h <- 0
-vmovupd YMM3, [RSP] ;YMM3 <- todos valor maximo menos el ultimo que es 0
-add RSP, 20h
+xor RAX,RAX         ; RAX <- 0
+mov [RSP+18h], RAX  ; RSP+18h <- 0 
+vmovupd YMM3, [RSP] ; YMM3 <- todos valor maximo menos el ultimo que es 0
+add RSP, 20h        ; Limpia el espacio
 vandpd YMM2, YMM2, YMM3 ;YMM2 <- valor eliminando la basura en la ultima posicion
-vextractf128 XMM3, YMM2, 1
-vaddpd XMM0, XMM2, XMM3
-movsd XMM1, XMM0
-movhlps XMM2, XMM0
-vaddsd XMM3, XMM1, XMM2
-vsqrtsd XMM0, XMM0, XMM3 
-vmovsd [distancia], XMM0
+vextractf128 XMM3, YMM2, 1 ;XMM3 <- parte de arriba ;XMM2 <- Queda con los valores de abajo
+vaddpd XMM0, XMM2, XMM3 ;XMM0 <- Suma de ambos valores
+movsd XMM1, XMM0        ; XMM1 <- el escalar abajo de XMM0
+movhlps XMM2, XMM0      ; XMM2 <- el escalar abajo de XMM0
+vaddsd XMM3, XMM1, XMM2 ; XMM3 <- Suma de los escalares
+vsqrtsd XMM0, XMM0, XMM3 ; XMM0 <- raiz cuadrada de (XMM3)
+vmovsd [distancia], XMM0 ; Guarda el resultado final
 ret
 
 normaFrobenius ENDP
