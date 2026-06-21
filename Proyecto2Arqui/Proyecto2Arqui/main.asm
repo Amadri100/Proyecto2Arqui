@@ -10,6 +10,8 @@ ExitProcess proto
 .data
     matriz1 dq 0,0,0, 0,0,0, 0,0,0
     matriz2 dq 0,0,0, 0,0,0, 0,0,0
+    matrizdif dq -2.0,-2.0,-1.0, 1.0,2.0,2.0, 0.0,-3.0,4.0
+    distancia dq ?
     labelM1  db "Matriz 1: ", 10, 0
     labelM2 db "Matriz 2: ", 10, 0
     labelFila1 db "Fila 1: ", 10, 0
@@ -19,19 +21,26 @@ ExitProcess proto
     filaTest2 db "Fila 2: %lf, %lf, %lf",10 ,0
     filaTest3 db "Fila 3: %lf, %lf, %lf",10 ,0
     tomaUnDouble  db "%lf", 0       ;Toma un double
-    
+    mostrarResultado db "La distancia de frobenius = %lf",10,0
+    mask_val_absoluto dq 7FFFFFFFFFFFFFFFh, 7FFFFFFFFFFFFFFFh, 7FFFFFFFFFFFFFFFh, 7FFFFFFFFFFFFFFFh
 .code
 main PROC
     sub RSP, 28h  
 
-    call leerEntradas
+    ;call leerEntradas
     xor RAX, RAX
-    call printMatrix1
-    call printMatrix2
+    ;call printMatrix1
+    ;call printMatrix2
+    call normaFrobenius
+    call printResultado
+
     mov ECX, 0          ; codigo de salida
     call ExitProcess
 
 main ENDP
+
+
+
 
 printMatrix1 PROC
 
@@ -123,9 +132,72 @@ printMatrix2 PROC
 
 printMatrix2 ENDP
 
-output PROC
+printResultado PROC
+    sub rsp, 28h
+    lea rcx, mostrarResultado
+    lea RAX, distancia
+    movsd xmm1, QWORD PTR [RAX]
+    movq rdx, xmm1
+    call printf
+    add rsp, 28h
+    ret
 
-output ENDP
+printResultado ENDP
+
+
+normaFrobenius PROC
+;Matriz:
+;a, b, c
+;d, e, f
+;g, h, i
+;Cargar Datos
+vmovupd YMM0, [matrizdif] ;YMM0 <- a,b,c,d(no se usa)
+vmovupd YMM1, [matrizdif+18h] ;YMM1<- d,e,f,g(no se usa)
+vmovupd XMM8, [matrizdif+30h] ;XMM8 <- g, h
+vxorpd XMM9,XMM9,XMM9
+vmovsd  XMM9, [matrizdif+40h] ;XMM9 <- i, 0
+vinsertf128 YMM2, YMM2, XMM8, 0     ;YMM2 <- g, h, ?, ?
+vinsertf128 YMM2, YMM2, XMM9, 1     ;YMM2 <- g, h, i, 0
+;vinsertf128, inserta segun el ultimo parametro 0: abajo 1: arriba
+;Valores absolutos
+vmovapd YMM8, [mask_val_absoluto] ; Mascara deja todos los bits prendidos excepto 
+                                ; el de signo
+                                ; YMM8 <- [valor_max_sinSigno,..,..,...]
+vandpd YMM0, YMM0, YMM8 ; |YMM0| -> valor abs de todos los valores en YMM0
+vandpd YMM1, YMM1, YMM8 ; |YMM1| 
+vandpd YMM2, YMM2, YMM8 ; |YMM2|
+;Elevarlos al cuadrado
+vmulpd YMM0, YMM0, YMM0 ;YMM0^2 <- YMM0 * YMM0
+vmulpd YMM1, YMM1, YMM1
+vmulpd YMM2, YMM2, YMM2
+;Sumarlos registros
+vaddpd YMM1, YMM0, YMM1 
+vaddpd YMM2, YMM1, YMM2
+vxorpd YMM3, YMM3, YMM3 ;YMM3 <- 0,0,0,0
+vpcmpeqq YMM3, YMM3, YMM3 ;YMM3 <- val_max, val_max,....
+;La instruccion compara YMM3 == YMM3 en 2 partes de 128 bits
+;Si son iguales deja  FFFFFFFFFFFFFFFFH en la parte correspondiente en el registro destino
+sub RSP, 20h
+vmovupd [RSP], YMM3
+;RSP : val_max
+;RSP +8h : val_max
+;RSP +10h : val_max
+;RSP +18h : val_max
+xor RAX,RAX
+mov [RSP+18h], RAX ; RSP+18h <- 0
+vmovupd YMM3, [RSP] ;YMM3 <- todos valor maximo menos el ultimo que es 0
+add RSP, 20h
+vandpd YMM2, YMM2, YMM3 ;YMM2 <- valor eliminando la basura en la ultima posicion
+vextractf128 XMM3, YMM2, 1
+vaddpd XMM0, XMM2, XMM3
+movsd XMM1, XMM0
+movhlps XMM2, XMM0
+vaddsd XMM3, XMM1, XMM2
+vsqrtsd XMM0, XMM0, XMM3 
+vmovsd [distancia], XMM0
+ret
+
+normaFrobenius ENDP
 
 leerEntradas PROC
     
