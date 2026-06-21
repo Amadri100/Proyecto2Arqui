@@ -10,7 +10,7 @@ ExitProcess proto
 .data
     matriz1 dq 0,0,0, 0,0,0, 0,0,0
     matriz2 dq 0,0,0, 0,0,0, 0,0,0
-    matrizdif dq -2.0,-2.0,-1.0, 1.0,2.0,2.0, 0.0,-3.0,4.0
+    matrizdif dq 0,0,0, 0,0,0, 0,0,0
     distancia dq ?
     labelM1  db "Matriz 1: ", 10, 0
     labelM2 db "Matriz 2: ", 10, 0
@@ -27,8 +27,46 @@ ExitProcess proto
 main PROC
     sub RSP, 28h  
 
-    ;call leerEntradas
+    call leerEntradas
     xor RAX, RAX
+
+    lea R8,  matriz1
+    lea R9,  matriz2
+    lea R10, matrizdif
+
+    ; Fila 0
+    vmovupd xmm0, [R8]
+    vmovupd xmm1, [R9]
+    vsubpd  xmm2, xmm0, xmm1
+    vmovupd [R10], xmm2
+
+    movsd xmm0, QWORD PTR [R8+16]
+    movsd xmm1, QWORD PTR [R9+16]
+    subsd xmm0, xmm1
+    movsd QWORD PTR [R10+16], xmm0
+
+    ; Fila 1
+    vmovupd xmm0, [R8+24]
+    vmovupd xmm1, [R9+24]
+    vsubpd  xmm2, xmm0, xmm1
+    vmovupd [R10+24], xmm2
+
+    movsd xmm0, QWORD PTR [R8+40]
+    movsd xmm1, QWORD PTR [R9+40]
+    subsd xmm0, xmm1
+    movsd QWORD PTR [R10+40], xmm0
+
+    ; Fila 2
+    vmovupd xmm0, [R8+48]
+    vmovupd xmm1, [R9+48]
+    vsubpd  xmm2, xmm0, xmm1
+    vmovupd [R10+48], xmm2
+
+    movsd xmm0, QWORD PTR [R8+64]
+    movsd xmm1, QWORD PTR [R9+64]
+    subsd xmm0, xmm1
+    movsd QWORD PTR [R10+64], xmm0
+
     ;call printMatrix1
     ;call printMatrix2
     call normaFrobenius
